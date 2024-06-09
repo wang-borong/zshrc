@@ -12,7 +12,8 @@ else
     # And we set 1081 as default proxy port.
     # netdev=$(ls /sys/class/net | grep -v lo)
     route_ip=$(ip route show scope global | awk -F "via " '{print $2}' | awk -F " dev" '{print $1}')
-    nc -vz $route_ip 1081
+    route_ip=$(echo $route_ip | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+\.).*/\11/')
+    nc -w 1 -vz $route_ip 1081 > /dev/null 2>&1
     if [[ $? == 0 ]]; then
         export http_proxy=http://$route_ip:1081
         export https_proxy=$http_proxy \
@@ -21,15 +22,12 @@ else
         unset route_ip
     else
         # or we check the work ip and port
-        ping -W 0.5 -c 1 192.168.4.100 > /dev/null 2>&1
+        nc -w 1 -vz 192.168.4.100 1081 > /dev/null 2>&1
         if [[ $? == 0 ]]; then
-            nc -vz 192.168.4.100 1081 > /dev/null 2>&1
-            if [[ $? == 0 ]]; then
-                export http_proxy=http://192.168.4.100:1081
-                export https_proxy=$http_proxy \
-                    ftp_proxy=$http_proxy \
-                    rsync_proxy=$http_proxy
-            fi
+            export http_proxy=http://192.168.4.100:1081
+            export https_proxy=$http_proxy \
+                ftp_proxy=$http_proxy \
+                rsync_proxy=$http_proxy
         fi
         # If the clash is not running in all env, then we don't set proxy.
     fi
